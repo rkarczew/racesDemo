@@ -13,7 +13,11 @@ angular
       .when('/', {
         templateUrl: 'views/main.html',
         controller: 'MainCtrl'
-      })
+      })      
+      .when('/participants/:raceId', {
+          templateUrl: 'views/participants.html',
+          controller: 'ParticipantsCtrl'
+          })
       .otherwise({
         redirectTo: '/'
       });
