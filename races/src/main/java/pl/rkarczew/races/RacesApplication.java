@@ -7,21 +7,29 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.circuitbreaker.EnableCircuitBreaker;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.netflix.feign.EnableFeignClients;
+import org.springframework.cloud.netflix.feign.FeignClient;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 
 @SpringBootApplication
 @RestController
 @EnableDiscoveryClient
 @EnableFeignClients
+@EnableCircuitBreaker
 public class RacesApplication implements CommandLineRunner{
 	
 	private static List<Race> races = new ArrayList<Race>();
 	
-	@Autowired
-	private ParticipantsClient participantsClient;
+    @Autowired
+    private ParticipantsInnerBean participantsBean;
 
 	public static void main(String[] args) {
 		SpringApplication.run(RacesApplication.class, args);
@@ -42,8 +50,35 @@ public class RacesApplication implements CommandLineRunner{
     public List<RaceWithParticipants> getRacesWithParticipants() {
         List<RaceWithParticipants> returnRaces = new ArrayList<RaceWithParticipants>();
         for(Race r : races) {
-            returnRaces.add(new RaceWithParticipants(r, participantsClient.getParticipants(r.getId())));
+            returnRaces.add(new RaceWithParticipants(r, participantsBean.getParticipants(r.getId())));
         }
         return returnRaces;
     }
+}
+
+@FeignClient("participants")
+interface ParticipantsInnerClient {
+	
+    @RequestMapping(method = RequestMethod.GET, value="/races/{raceId}")
+    List<Participant> getParticipants(@PathVariable("raceId") String raceId);
+}
+
+@Component
+class ParticipantsInnerBean {
+   
+   @Autowired
+   private ParticipantsInnerClient participantsClient;
+
+   
+
+   @HystrixCommand(fallbackMethod = "defaultParticipants")
+   public List<Participant> getParticipants(String raceId) {
+       return participantsClient.getParticipants(raceId);
+   }
+
+   
+   public List<Participant> defaultParticipants(String raceId) {
+       return new ArrayList<Participant>();
+   }
+
 }
