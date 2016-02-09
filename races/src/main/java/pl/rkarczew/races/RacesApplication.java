@@ -50,7 +50,8 @@ public class RacesApplication implements CommandLineRunner{
     public List<RaceWithParticipants> getRacesWithParticipants() {
         List<RaceWithParticipants> returnRaces = new ArrayList<RaceWithParticipants>();
         for(Race r : races) {
-            returnRaces.add(new RaceWithParticipants(r, participantsBean.getParticipants(r.getId())));
+            returnRaces.add(new RaceWithParticipants(r, participantsBean.getParticipantsHS(r.getId())));
+            //returnRaces.add(new RaceWithParticipants(r, participantsBean.getParticipantsWithTryCatch(r.getId())));
         }
         return returnRaces;
     }
@@ -72,10 +73,20 @@ class ParticipantsInnerBean {
    
 
    @HystrixCommand(fallbackMethod = "defaultParticipants")
-   public List<Participant> getParticipants(String raceId) {
+   public List<Participant> getParticipantsWithTryCatch(String raceId) {  
+		try{
+       return participantsClient.getParticipants(raceId);
+		}
+		catch(Exception e){
+			e.printStackTrace();
+			return defaultParticipants(raceId);
+		}
+   }
+   
+   //@HystrixCommand(fallbackMethod = "defaultParticipants")
+   public List<Participant> getParticipantsHS(String raceId) {
        return participantsClient.getParticipants(raceId);
    }
-
    
    public List<Participant> defaultParticipants(String raceId) {
        return new ArrayList<Participant>();
